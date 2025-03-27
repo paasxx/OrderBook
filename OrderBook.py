@@ -153,6 +153,37 @@ class TradeManager(TradeManagerInterface):
             print_line()
 
 
+class OrderBookInterface(ABC):
+
+    @abstractmethod
+    def addOrder(self, order_type, order) -> None:
+        pass
+
+    @abstractmethod
+    def removeOrder(self, order_id: int) -> None:
+        pass
+
+    @abstractmethod
+    def cleanHeap(self) -> None:
+        pass
+
+    @abstractmethod
+    def getAskOrder(self) -> None:
+        pass
+
+    @abstractmethod
+    def getBidOrder(self) -> None:
+        pass
+
+    @abstractmethod
+    def listAsk(self, depth: int) -> None:
+        pass
+
+    @abstractmethod
+    def listBid(self, depth: int) -> None:
+        pass
+
+
 class MatchingStrategy(ABC):
     @abstractmethod
     def match(self, orderbook, new_order):
@@ -160,7 +191,7 @@ class MatchingStrategy(ABC):
 
 
 class MarketOrderMatching(MatchingStrategy):
-    def match(self, orderbook, new_order):
+    def match(self, orderbook: OrderBookInterface, new_order):
 
         price_quantity = 0
         original_quantity = new_order.quantity
@@ -299,7 +330,7 @@ class MarketOrderMatching(MatchingStrategy):
 
 
 class LimitOrderMatching(MatchingStrategy):
-    def match(self, orderbook, new_order):
+    def match(self, orderbook: OrderBookInterface, new_order):
 
         if (
             orderbook.buy_orders
@@ -376,7 +407,7 @@ def print_line():
     print("------------------------")
 
 
-class OrderBook:
+class HeapOrderBook(OrderBookInterface):
     def __init__(
         self,
         asset,
@@ -474,7 +505,7 @@ def createOrderBook():
     OrderFactory.register_order_type("limit", LimitOrder)
     OrderFactory.register_order_type("market", MarketOrder)
 
-    ob = OrderBook("BTC-USD", TradeManager(), strategies)
+    ob = HeapOrderBook("BTC-USD", TradeManager(), strategies)
 
     ob.getBidOrder()
     ob.getAskOrder()
