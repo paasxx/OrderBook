@@ -94,6 +94,9 @@ class MarketOrder(BaseOrder):
     ):
         super().__init__(order_id, quantity, order_side, asset, partial_fill_behavior)
 
+
+class ConvertibleMarketOrder(MarketOrder):
+
     def convert_to_limit(self, price):
         """Convert order to limit if needed, as a market order
         that has to be hanged in book because of lacking liquidity"""
@@ -213,8 +216,18 @@ class MarketOrderMatching(MatchingStrategy):
                 if new_order.partial_fill_behavior == "convert_to_limit":
                     best_bid = orderbook.getBidOrder()
                     if best_bid:
-                        limit_order = new_order.convert_to_limit(best_bid)
+                        limit_order = ConvertibleMarketOrder(
+                            new_order.order_id,
+                            new_order.quantity,
+                            new_order.side,
+                            new_order.asset,
+                        ).convert_to_limit(best_bid)
+
                         heapq.heappush(orderbook.buy_orders, limit_order)
+                    else:
+                        raise ValueError(
+                            "There is no Bid to convert Market Order to Limit Order"
+                        )
                 elif new_order.partial_fill_behavior == "cancel":
                     print(
                         f"Cancelando ordem de mercado {new_order.order_id} por falta de liquidez."
@@ -265,7 +278,12 @@ class MarketOrderMatching(MatchingStrategy):
                 if new_order.partial_fill_behavior == "convert_to_limit":
                     best_ask = orderbook.getAskOrder()
                     if best_ask:
-                        limit_order = new_order.convert_to_limit(best_ask)
+                        limit_order = ConvertibleMarketOrder(
+                            new_order.order_id,
+                            new_order.quantity,
+                            new_order.side,
+                            new_order.asset,
+                        ).convert_to_limit(best_ask)
                         heapq.heappush(orderbook.buy_orders, limit_order)
                 elif new_order.partial_fill_behavior == "cancel":
                     print(
@@ -313,7 +331,7 @@ class LimitOrderMatching(MatchingStrategy):
                 )
                 best_buy_order.quantity -= best_sell_order.quantity
                 heapq.heappop(orderbook.sell_orders)
-                if orderbook.buy_orders and best_sell_order.quantity == 0:
+                if orderbook.buy_orders and best_buy_order.quantity == 0:
                     heapq.heappop(orderbook.buy_orders)
 
             else:
