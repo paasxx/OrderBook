@@ -121,17 +121,34 @@ class OrderFactory:
         return cls.order_types[order_type](*args, **kwargs)
 
 
-class TradeManagerInterface(ABC):
-    @abstractmethod
-    def record_trade(self, trade):
-        pass
+# class TradeManagerInterface(ABC):
+#     @abstractmethod
+#     def record_trade(self, trade):
+#         pass
+
+#     @abstractmethod
+#     def list_trades(self):
+#         pass
+
+class TradeStorage(ABC):
 
     @abstractmethod
-    def list_trades(self):
+    def record_trade(self):
         pass
 
+class TradeHistory(ABC):
+
+    @abstractmethod
+    def list_trades(self):    
+        pass
+
+# ISP (Interface Segregation Principle)
+class TradeManagerInterface(TradeStorage, TradeHistory):
+    pass
+    
 
 class TradeManager(TradeManagerInterface):
+
     def __init__(self):
         self.trades = []
 
@@ -151,6 +168,23 @@ class TradeManager(TradeManagerInterface):
         else:
             print(f"Trade List are empty!")
             print_line()
+
+    # Daria pra usar um wrapper tambem ao invés da herança múltipla direta:
+
+    # class TradeProcessor(TradeStorage, TradeHistory):
+    #     pass
+
+    # class TradeProcessorWrapper(TradeProcessor):
+    #     def __init__(self, storage: TradeStorage, history: TradeHistory):
+    #         self._storage = storage
+    #         self._history = history
+        
+    #     def record_trade(self):
+    #         return self._storage.record_trade()
+        
+    #     def list_trades(self):
+    #         return self._history.list_trades()
+
 
 
 class OrderBookInterface(ABC):
