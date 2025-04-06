@@ -1,7 +1,19 @@
 import heapq
 from datetime import datetime
 from abc import ABC, abstractmethod
+import logging
 
+logging.basicConfig(
+    level = logging.INFO,
+    format = "%(asctime)s [%(levelname)s] %(message)s",
+    datefmt= "%H:%M:%S",
+    handlers=[
+        logging.FileHandler("orderbook_log.txt"),   # escreve no arquivo
+        logging.StreamHandler()                     # mostra no terminal também (opcional)
+    ]
+)
+
+logger = logging.getLogger(__name__)
 
 # 4️⃣ Interface Segregation Principle (ISP)
 # O TradeManagerInterface obriga todas as implementações a terem record_trade e list_trades. Se tivermos um TradeStorage que só armazena mas não lista trades, ele será forçado a implementar um método inútil.
@@ -18,14 +30,6 @@ from abc import ABC, abstractmethod
 #         pass
 
 
-# trocar tudo por logging
-
-# import logging
-# logger = logging.getLogger(__name__)
-
-# # Substituir prints por:
-# logger.info(f"Cancelando ordem {new_order.order_id} por falta de liquidez.")
-
 
 class AbstractOrder(ABC):
     def __init__(self, order_id: int, quantity: int, order_side: str, asset: str):
@@ -38,14 +42,13 @@ class AbstractOrder(ABC):
     def validate(self):
         if self.quantity <= 0:
             raise ValueError("Quantity must be bigger than zero!")
-
+    
     def __repr__(self):
-        return f"Order: {self.order_id}, qty: {self.quantity}, side: {self.order_side}, asset: {self.asset}"
+        return f"<{self.__class__.__name__} id={self.order_id}, qty={self.quantity}, side={self.order_side}, asset={self.asset}>"
 
+    @abstractmethod
     def __lt__(self, other):
-        if not isinstance(other, AbstractOrder):
-            return NotImplemented  # Avoid invalid comparisons
-        return self.timestamp < other.timestamp
+        pass
 
 
 class BaseOrder(AbstractOrder):
@@ -60,6 +63,11 @@ class BaseOrder(AbstractOrder):
         super().__init__(order_id, quantity, order_side, asset)
         self.partial_fill_behavior = partial_fill_behavior
 
+    def __lt__(self, other):
+        if not isinstance(other, BaseOrder):
+            return NotImplemented  # Avoid invalid comparisons
+        return self.timestamp < other.timestamp
+
 
 class PricedOrder(AbstractOrder):
     def __init__(self, order_id, price, quantity, order_side, asset):
@@ -67,8 +75,8 @@ class PricedOrder(AbstractOrder):
         self.price = price
 
     def __repr__(self):
-        return f"Order: {self.order_id}, price: {self.price} qty: {self.quantity}, side: {self.order_side}, asset: {self.asset}"
-
+        return f"<{self.__class__.__name__} id={self.order_id}, price: {self.price}, qty={self.quantity}, side={self.order_side}, asset={self.asset}>"
+    
     def __lt__(self, other):
         if not isinstance(other, PricedOrder):
             return NotImplemented  # Avoid invalid comparisons
@@ -86,6 +94,17 @@ class LimitOrder(PricedOrder):
     def __init__(self, order_id, price, quantity, order_side, asset):
         super().__init__(order_id, price, quantity, order_side, asset)
 
+    def __lt__(self, other):
+        if not isinstance(other, LimitOrder):
+            return NotImplemented  # Avoid invalid comparisons
+        if self.price == other.price:
+            return self.timestamp < other.timestamp
+        return (
+            self.price > other.price
+            if self.order_side == "buy"
+            else self.price < other.price
+        )
+
 
 class MarketOrder(BaseOrder):
 
@@ -94,8 +113,16 @@ class MarketOrder(BaseOrder):
     ):
         super().__init__(order_id, quantity, order_side, asset, partial_fill_behavior)
 
+    def __lt__(self, other):
+        if not isinstance(other, MarketOrder):
+            return NotImplemented  # Avoid invalid comparisons
+        return self.timestamp < other.timestamp
+
 
 class ConvertibleMarketOrder(MarketOrder):
+
+    def __init__(self, order: MarketOrder):
+        super().__init__(order.order_id, order.quantity, order.order_side, order.asset,order.partial_fill_behavior)
 
     def convert_to_limit(self, price):
         """Convert order to limit if needed, as a market order
@@ -120,6 +147,7 @@ class OrderFactory:
             raise ValueError(f"Order type: '{order_type}' not registered!")
         return cls.order_types[order_type](*args, **kwargs)
 
+# Sem o ISP fica igual abaixo (pro artigo)
 
 # class TradeManagerInterface(ABC):
 #     @abstractmethod
@@ -133,7 +161,7 @@ class OrderFactory:
 class TradeStorage(ABC):
 
     @abstractmethod
-    def record_trade(self):
+    def record_trade(self,trade):
         pass
 
 class TradeHistory(ABC):
@@ -154,22 +182,22 @@ class TradeManager(TradeManagerInterface):
 
     def record_trade(self, trade):
         self.trades.append(trade)
-        print(f"Trade recorde: {trade}")
+        logger.info(f"Trade recorded: {trade}")
         print_line()
 
     def list_trades(self):
 
         if self.trades:
-            print("Trade List:")
+            logger.info("Trade List:")
             for index, trade in enumerate(self.trades):
-                print(index, trade)
+                logger.info(f"index: {index}, trade: {trade}")
                 print_line()
 
         else:
-            print(f"Trade List are empty!")
+            logger.info(f"Trade List are empty!")
             print_line()
 
-    # Daria pra usar um wrapper tambem ao invés da herança múltipla direta:
+    # Daria pra usar um wrapper tambem ao invés da herança múltipla direta, para nao ter que criar diversas classes:
 
     # class TradeProcessor(TradeStorage, TradeHistory):
     #     pass
@@ -281,20 +309,14 @@ class MarketOrderMatching(MatchingStrategy):
                 if new_order.partial_fill_behavior == "convert_to_limit":
                     best_bid = orderbook.getBidOrder()
                     if best_bid:
-                        limit_order = ConvertibleMarketOrder(
-                            new_order.order_id,
-                            new_order.quantity,
-                            new_order.side,
-                            new_order.asset,
-                        ).convert_to_limit(best_bid)
-
+                        limit_order = ConvertibleMarketOrder(new_order).convert_to_limit(best_bid)
                         heapq.heappush(orderbook.buy_orders, limit_order)
                     else:
                         raise ValueError(
                             "There is no Bid to convert Market Order to Limit Order"
                         )
                 elif new_order.partial_fill_behavior == "cancel":
-                    print(
+                    logger.warning(
                         f"Cancelando ordem de mercado {new_order.order_id} por falta de liquidez."
                     )
 
@@ -343,22 +365,17 @@ class MarketOrderMatching(MatchingStrategy):
                 if new_order.partial_fill_behavior == "convert_to_limit":
                     best_ask = orderbook.getAskOrder()
                     if best_ask:
-                        limit_order = ConvertibleMarketOrder(
-                            new_order.order_id,
-                            new_order.quantity,
-                            new_order.side,
-                            new_order.asset,
-                        ).convert_to_limit(best_ask)
+                        limit_order = ConvertibleMarketOrder(new_order).convert_to_limit(best_ask)
                         heapq.heappush(orderbook.buy_orders, limit_order)
                 elif new_order.partial_fill_behavior == "cancel":
-                    print(
-                        f"Cancelando ordem de mercado {new_order.order_id} por falta de liquidez."
+                    logger.warning(
+                        f"Cancelling market order {new_order.order_id}, no liquidity in book order."
                     )
 
-        avg_price = price_quantity / original_quantity
-        print(f"Average price for Market Order is: {avg_price}")
+        avg_price = price_quantity / original_quantity if original_quantity else 0
+        logger.info(f"Average price for Market Order is: {avg_price}")
         print_line()
-        print(f"Executando ordem a mercado: {new_order}")
+        logger.info(f"Matching Market Order: {new_order}")
         print_line()
         return avg_price
 
@@ -414,7 +431,7 @@ class LimitOrderMatching(MatchingStrategy):
                 if orderbook.sell_orders and best_sell_order.quantity == 0:
                     heapq.heappop(orderbook.sell_orders)
 
-        print(f"Matching ordem limite {new_order}")
+        logger.info(f"Matching limit order {new_order}")
         print_line()
 
 
@@ -434,11 +451,11 @@ class Trade:
         self.asset = asset
 
     def __repr__(self):
-        return f"Trade(buy_order_id={self.buy_order_id}, sell_order_id={self.sell_order_id}, price={self.execution_price}, qty={self.filled_quantity}, asset={self.asset})"
+        return f"<{self.__class__.__name__} (buy_order_id={self.buy_order_id}, sell_order_id={self.sell_order_id}, price={self.execution_price}, qty={self.filled_quantity}, asset={self.asset})>"
 
 
-def print_line():
-    print("------------------------")
+def print_line(length=80):
+    logger.info("_" * length)
 
 
 class HeapOrderBook(OrderBookInterface):
@@ -468,7 +485,7 @@ class HeapOrderBook(OrderBookInterface):
                 heapq.heappush(self.sell_orders, order)
 
         if order_type in self.strategies:
-            print(f"Adicionando ordem {order_type}: {order}")
+            logger.info(f"Placing order {order_type}: {order}")
             print_line()
             self.strategies[order_type].match(self, order)
 
@@ -487,48 +504,48 @@ class HeapOrderBook(OrderBookInterface):
 
     def getAskOrder(self):
         if self.sell_orders:
-            print(f"Ask: {self.sell_orders[0].price}")
+            logger.info(f"Ask: {self.sell_orders[0].price}")
             print_line()
             return self.sell_orders[0].price
         else:
-            print("Ask Book is empty.")
+            logger.info("Ask Book is empty.")
             print_line()
 
     def getBidOrder(self):
         if self.buy_orders:
-            print(f"Bid: {self.buy_orders[0].price}")
+            logger.info(f"Bid: {self.buy_orders[0].price}")
             print_line()
             return self.buy_orders[0].price
         else:
-            print("Bid Book is empty.")
+            logger.info("Bid Book is empty.")
             print_line()
 
     def listAsk(self, depth: int):
         """List first (depth) orders in the Ask order book"""
         asks = heapq.nsmallest(depth, self.sell_orders)
         if asks:
-            print("Ask Orders:")
+            logger.info("Ask Orders:")
             for order in reversed(asks):
-                print(
+                logger.info(
                     f"Order ID:{order.order_id}, Price: {order.price}, Qty: {order.quantity}"
                 )
                 print_line()
         else:
-            print("No Ask Orders Available.")
+            logger.info("No Ask Orders Available.")
             print_line()
 
     def listBid(self, depth: int):
         "List first (depth) orders in the Bid order book."
         bids = heapq.nlargest(depth, self.buy_orders)
         if bids:
-            print("Bid Orders:")
+            logger.info("Bid Orders:")
             for order in reversed(bids):
-                print(
+                logger.info(
                     f"Order ID: {order.order_id}, Price: {order.price}, Qty: {order.quantity}"
                 )
                 print_line()
         else:
-            print("No Bid orders Available.")
+            logger.info("No Bid orders Available.")
             print_line()
 
 
@@ -554,6 +571,7 @@ def createOrderBook():
     order6 = OrderFactory.create_order("limit", 6, 25, 100, "sell", "BTC-USD")
     order7 = OrderFactory.create_order("limit", 7, 50, 100, "sell", "BTC-USD")
     order8 = OrderFactory.create_order("limit", 8, 250, 100, "sell", "BTC-USD")
+
 
     ob.addOrder("limit", order1)
     ob.addOrder("limit", order2)
