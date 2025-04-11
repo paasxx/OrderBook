@@ -36,6 +36,44 @@ If you're a fintech, hedge fund, or looking for a backend engineer with financia
 - `TradeManager`: Handles recording and listing of trades
 - Follows Interface Segregation Principle with separate concerns (`record`, `list`)
 
+## ▶️ Usage Example
+
+Here's a simple usage example to get started with the matching engine:
+
+```python
+from core.matching import LimitOrderMatching, MarketOrderMatching
+from core.factory import OrderFactory
+from core.orders import LimitOrder, MarketOrder
+from services.trade_manager import TradeManager
+from core.orderbook import HeapOrderBook
+
+# Setup: Register order types and matching strategies
+strategies = {
+    "limit": LimitOrderMatching(),
+    "market": MarketOrderMatching(),
+}
+
+OrderFactory.register_order_type("limit", LimitOrder)
+OrderFactory.register_order_type("market", MarketOrder)
+
+# Initialize the order book
+order_book = HeapOrderBook("BTC-USD", TradeManager(), strategies)
+
+# Add limit orders (buy & sell)
+order_book.addOrder("limit", OrderFactory.create_order("limit", 1, 100, 10, "buy", "BTC-USD"))
+order_book.addOrder("limit", OrderFactory.create_order("limit", 2, 105, 5, "sell", "BTC-USD"))
+
+# Top-of-book inspection
+order_book.getBidOrder()
+order_book.getAskOrder()
+
+# Add a market order that triggers matching
+order_book.addOrder("market", OrderFactory.create_order("market", 3, 15, "buy", "BTC-USD"))
+
+# Print recorded trades
+order_book.trade_manager.list_trades()
+
+
 ### 🧠 Design Principles
 - **OOP**: Modular, encapsulated components
 - **SOLID**:
@@ -49,5 +87,21 @@ If you're a fintech, hedge fund, or looking for a backend engineer with financia
 
 Basic tests are available in `/tests`. Run with:
 
-```bash
+# 1. Navigate to the root of the project (where this README is)
+cd path/to/project-root
+
+# 2. Create a virtual environment in the root directory
+python -m venv venv
+
+# 3. Activate the environment
+# On macOS/Linux:
+source venv/bin/activate
+# On Windows:
+venv\Scripts\activate
+
+# 4. Install dependencies
+pip install -r requirements.txt
+
+# 5. Run the test suite
 pytest tests/
+
