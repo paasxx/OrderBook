@@ -51,6 +51,24 @@ class HeapOrderBook(OrderBookInterface):
 
     def getAskOrder(self):
         if self.sell_orders:
+            logger.info(f"Ask order: {self.sell_orders[0]}")
+            print_line()
+            return self.sell_orders[0]
+        else:
+            logger.info("Ask Book is empty.")
+            print_line()
+
+    def getBidOrder(self):
+        if self.buy_orders:
+            logger.info(f"Bid order: {self.buy_orders[0]}")
+            print_line()
+            return self.buy_orders[0]
+        else:
+            logger.info("Bid Book is empty.")
+            print_line()
+    
+    def getAsk(self):
+        if self.sell_orders:
             logger.info(f"Ask: {self.sell_orders[0].price}")
             print_line()
             return self.sell_orders[0].price
@@ -58,7 +76,7 @@ class HeapOrderBook(OrderBookInterface):
             logger.info("Ask Book is empty.")
             print_line()
 
-    def getBidOrder(self):
+    def getBid(self):
         if self.buy_orders:
             logger.info(f"Bid: {self.buy_orders[0].price}")
             print_line()

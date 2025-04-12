@@ -30,9 +30,11 @@ class BaseOrder(AbstractOrder):
         order_side: str,
         asset: str,
         partial_fill_behavior: str,
+        fallback_price: float,
     ):
         super().__init__(order_id, quantity, order_side, asset)
         self.partial_fill_behavior = partial_fill_behavior
+        self.fallback_price = fallback_price
 
     def __lt__(self, other):
         if not isinstance(other, BaseOrder):
@@ -80,9 +82,9 @@ class LimitOrder(PricedOrder):
 class MarketOrder(BaseOrder):
 
     def __init__(
-        self, order_id, quantity, order_side, asset, partial_fill_behavior="cancel"
+        self, order_id, quantity, order_side, asset, partial_fill_behavior="cancel", fallback_price = None,
     ):
-        super().__init__(order_id, quantity, order_side, asset, partial_fill_behavior)
+        super().__init__(order_id, quantity, order_side, asset, partial_fill_behavior, fallback_price)
 
     def __lt__(self, other):
         if not isinstance(other, MarketOrder):
@@ -93,11 +95,13 @@ class MarketOrder(BaseOrder):
 class ConvertibleMarketOrder(MarketOrder):
 
     def __init__(self, order: MarketOrder):
-        super().__init__(order.order_id, order.quantity, order.order_side, order.asset,order.partial_fill_behavior)
+        super().__init__(order.order_id, order.quantity, order.order_side, order.asset,order.partial_fill_behavior, order.fallback_price)
 
     def convert_to_limit(self, price):
         """Convert order to limit if needed, as a market order
         that has to be hanged in book because of lacking liquidity"""
+        if price is None:
+            raise ValueError("Cannot convert to limit order without a price.")
 
         return LimitOrder(
             self.order_id, price, self.quantity, self.order_side, self.asset

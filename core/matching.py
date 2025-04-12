@@ -61,10 +61,15 @@ class MarketOrderMatching(MatchingStrategy):
             # Test if there is order quantity left to hang
             if new_order.quantity > 0 and not orderbook.sell_orders:
                 if new_order.partial_fill_behavior == "convert_to_limit":
-                    best_bid = orderbook.getBidOrder()
+                    best_bid = orderbook.getBid()
                     if best_bid:
                         limit_order = ConvertibleMarketOrder(new_order).convert_to_limit(best_bid)
                         heapq.heappush(orderbook.buy_orders, limit_order)
+                        logger.info(f"Converted Market Order {new_order.order_id} to Limit Order with price {limit_order.price} and quantity {limit_order.quantity}")
+                    elif new_order.fallback_price:
+                        limit_order = ConvertibleMarketOrder(new_order).convert_to_limit(new_order.fallback_price)
+                        heapq.heappush(orderbook.buy_orders, limit_order)
+                        logger.info(f"Converted Market Order {new_order.order_id} to Limit Order with price {limit_order.price} and quantity {limit_order.quantity}")
                     else:
                         raise ValueError(
                             "There is no Bid to convert Market Order to Limit Order"
@@ -117,10 +122,19 @@ class MarketOrderMatching(MatchingStrategy):
             # Test if there is order quantity left to hang
             if new_order.quantity > 0 and not orderbook.buy_orders:
                 if new_order.partial_fill_behavior == "convert_to_limit":
-                    best_ask = orderbook.getAskOrder()
+                    best_ask = orderbook.getAsk()
                     if best_ask:
                         limit_order = ConvertibleMarketOrder(new_order).convert_to_limit(best_ask)
-                        heapq.heappush(orderbook.buy_orders, limit_order)
+                        heapq.heappush(orderbook.sell_orders, limit_order)
+                        logger.info(f"Converted Market Order {new_order.order_id} to Limit Order with price {limit_order.price} and quantity {limit_order.quantity}")
+                    elif new_order.fallback_price:
+                        limit_order = ConvertibleMarketOrder(new_order).convert_to_limit(new_order.fallback_price)
+                        heapq.heappush(orderbook.sell_orders, limit_order)
+                        logger.info(f"Converted Market Order {new_order.order_id} to Limit Order with price {limit_order.price} and quantity {limit_order.quantity}")
+                    else:
+                        raise ValueError(
+                            "There is no Bid to convert Market Order to Limit Order"
+                        )
                 elif new_order.partial_fill_behavior == "cancel":
                     logger.warning(
                         f"Cancelling market order {new_order.order_id}, no liquidity in book order."
