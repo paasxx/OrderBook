@@ -38,6 +38,14 @@ class OrderBookInterface(ABC):
         pass
 
     @abstractmethod
+    def getAsk(self) -> None:
+        pass
+
+    @abstractmethod
+    def getBid(self) -> None:
+        pass
+
+    @abstractmethod
     def listAsk(self, depth: int) -> None:
         pass
 

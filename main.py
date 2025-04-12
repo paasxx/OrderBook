@@ -14,37 +14,53 @@ def createOrderBook():
 
     ob = HeapOrderBook("BTC-USD", TradeManager(), strategies)
 
-    ob.getBidOrder()
-    ob.getAskOrder()
+    ob.getBid()
+    ob.getAsk()
     ob.trade_manager.list_trades()
 
-    order1 = OrderFactory.create_order("limit", 1, 15, 100, "buy", "BTC-USD")
-    order2 = OrderFactory.create_order("limit", 2, 23.5, 100, "buy", "BTC-USD")
-    order3 = OrderFactory.create_order("limit", 3, 25, 100, "buy", "BTC-USD")
-    order4 = OrderFactory.create_order("limit", 4, 250, 100, "buy", "BTC-USD")
+     # Buy limit orders
+    order1 = OrderFactory.create_order(
+        order_type="limit", order_id=1, price=15, quantity=100, order_side="buy", asset="BTC-USD"
+    )
+    order2 = OrderFactory.create_order(
+        order_type="limit", order_id=2, price=23.5, quantity=100, order_side="buy", asset="BTC-USD"
+    )
+    order3 = OrderFactory.create_order(
+        order_type="limit", order_id=3, price=25, quantity=100, order_side="buy", asset="BTC-USD"
+    )
+    order4 = OrderFactory.create_order(
+        order_type="limit", order_id=4, price=250, quantity=100, order_side="buy", asset="BTC-USD"
+    )
 
-    order5 = OrderFactory.create_order("limit", 5, 23.5, 100, "sell", "BTC-USD")
-    order6 = OrderFactory.create_order("limit", 6, 25, 100, "sell", "BTC-USD")
-    order7 = OrderFactory.create_order("limit", 7, 50, 100, "sell", "BTC-USD")
-    order8 = OrderFactory.create_order("limit", 8, 250, 100, "sell", "BTC-USD")
+    # Sell limit orders
+    order5 = OrderFactory.create_order(
+        order_type="limit", order_id=5, price=23.5, quantity=100, order_side="sell", asset="BTC-USD"
+    )
+    order6 = OrderFactory.create_order(
+        order_type="limit", order_id=6, price=25, quantity=100, order_side="sell", asset="BTC-USD"
+    )
+    order7 = OrderFactory.create_order(
+        order_type="limit", order_id=7, price=50, quantity=100, order_side="sell", asset="BTC-USD"
+    )
+    order8 = OrderFactory.create_order(
+        order_type="limit", order_id=8, price=250, quantity=100, order_side="sell", asset="BTC-USD"
+    )
 
 
-    ob.addOrder("limit", order1)
-    ob.addOrder("limit", order2)
-    ob.addOrder("limit", order3)
-    ob.addOrder("limit", order4)
-    ob.addOrder("limit", order5)
-    ob.addOrder("limit", order6)
-    ob.addOrder("limit", order7)
-    ob.addOrder("limit", order8)
+    # Add all limit orders to the book
+    for order in [order1, order2, order3, order4, order5, order6, order7, order8]:
+        ob.addOrder(order_type="limit", order=order)
 
-    ob.getBidOrder()
-    ob.getAskOrder()
+    ob.getBid()
+    ob.getAsk()
     ob.trade_manager.list_trades()
     ob.listAsk(10)
     ob.listBid(10)
 
-    order9 = OrderFactory.create_order("market", 9, 20, "buy", "BTC-USD")
+    # Market order with fallback behavior
+    order9 = OrderFactory.create_order(
+        order_type="market", order_id=9, quantity=20, order_side="buy", asset="BTC-USD", partial_fill_behavior="convert_to_limit"
+    )
 
     ob.addOrder("market", order9)
 
