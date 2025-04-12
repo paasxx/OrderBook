@@ -154,25 +154,32 @@ market_order = MarketOrder(
 
 Basic tests are available in `/tests`. Run with:
 
-# 1. Navigate to the root of the project (where this README is)
+### 1. Navigate to the root of the project (where this README is)
+```python
 cd path/to/project-root
-
-# 2. Create a virtual environment in the root directory, if Mac OS use python3
+```
+### 2. Create a virtual environment in the root directory, if Mac OS use python3
+```python
 python -m venv venv
-
-# 3. Activate the environment
-# On macOS/Linux:
+```
+### 3. Activate the environment
+#### On macOS/Linux:
+```python
 source venv/bin/activate
-# On Windows:
+```
+### On Windows:
+```python
 venv\Scripts\activate
-
-# 4. Install dependencies
+```
+### 4. Install dependencies
+```python
 pip install -r requirements.txt
-
-# 5. Run the test suite
+```
+### 5. Run the test suite
+```python
 pytest tests/
-
-# 6. Run main.py to see logs system
+```
+### 6. Run main.py to see logs system
 
 📟 You can also run main.py to simulate real-time logs and see terminal output + file logging.
 Logs are saved in the logs/ folder with timestamped filenames.
