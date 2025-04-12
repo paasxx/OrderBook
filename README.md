@@ -66,11 +66,25 @@ order_book = HeapOrderBook("BTC-USD", TradeManager(), strategies)
 # Add limit orders (buy & sell)
 order_book.addOrder(
     order_type="limit",
-    order=OrderFactory.create_order("limit", order_id=1, price=100, quantity=10, order_side="buy", asset="BTC-USD")
+    order=OrderFactory.create_order(
+      "limit", 
+      order_id=1, 
+      price=100, 
+      quantity=10, 
+      order_side="buy", 
+      asset="BTC-USD"
+      )
 )
 order_book.addOrder(
     order_type="limit",
-    order=OrderFactory.create_order("limit", order_id=2, price=105, quantity=5, order_side="sell", asset="BTC-USD")
+    order=OrderFactory.create_order(
+      "limit", 
+      order_id=2, 
+      price=105, 
+      quantity=5, 
+      order_side="sell", 
+      asset="BTC-USD"
+      )
 )
 
 # Top-of-book inspection
@@ -80,12 +94,20 @@ order_book.getAsk()
 # Add a market order that triggers matching
 order_book.addOrder(
     order_type="market",
-    order=OrderFactory.create_order("market", order_id=3, quantity=15, order_side="buy", asset="BTC-USD")
+    order=OrderFactory.create_order(
+      "market", 
+      order_id=3, 
+      quantity=15, 
+      order_side="buy", 
+      asset="BTC-USD"
+      )
 )
 
 
 # log recorded trades
 order_book.trade_manager.list_trades()
+
+```
 
 ### 🔄 Market Order: Fallback, Fill Behavior, and Conversion
 
@@ -116,7 +138,7 @@ market_order = MarketOrder(
     fallback_price=98,
     fill_behavior="convert_to_limit",  # Fill what can be filled, convert the rest
 )
-
+```
 
 ### 🧠 Design Principles
 - **OOP**: Modular, encapsulated components
